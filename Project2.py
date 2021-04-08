@@ -55,7 +55,7 @@ def get_search_links():
 
     for link in links:
         ending = link.get('href')
-        url_list.append('https://www.goodreads.com/book/show/' + ending)
+        url_list.append('https://www.goodreads.com' + ending)
     return url_list[:10]
     
 
@@ -77,13 +77,11 @@ def get_book_summary(book_url):
     r = requests.get(book_url)
     soup = BeautifulSoup(r.text, 'html.parser')
     
-    title = soup.find('h1', id = "bookTitle").text.strip()
-    author = soup.find('a', class_ = "authorName").text.strip()
-    page_num = soup.find('span', itemprop='numberOfPages').text.strip()
+    title = soup.find('h1', class_ = "gr-h1 gr-h1--serif").text.strip()
+    author = soup.find('a', class_ = "authorName").text
+    page_num = soup.find('span', itemprop='numberOfPages').text.strip().split()
 
-    return (title, author, page_num)
-    
-
+    return (title, author, int(page_num[0]))
     
 
 def summarize_best_books(filepath):
@@ -99,8 +97,27 @@ def summarize_best_books(filepath):
     """
     with open(filepath) as f:
         rfile = f.read()
-        soup = BeautifulSoup(rfile, 'html.parser')
+    soup = BeautifulSoup(rfile, 'html.parser')
+
+    category_list = []
+    title_list = []
+    url_list = []
+    complete_list = []
     
+    categories = soup.findall('a', class_ = "category_copy").text.strip()
+    for category in categories:
+        category_list.append(category.text.strip())
+    titles = soup.findall()
+    for title in titles:
+        title_list.append(title.text.strip())
+    urls = soup.findall()
+    for url in urls:
+        url_list.append(url.text.strip())
+    for i in range(len(categories)):
+        complete_list.append((category_list[i], title_list[i], url_list[i]))
+    return complete_list
+
+        
 
 
 def write_csv(data, filename):
@@ -123,7 +140,12 @@ def write_csv(data, filename):
 
     This function should not return anything.
     """
-    pass
+    
+    open_file = open(filename, "w", newline="")
+    writer = csv.writer(open_file, delimiter = ",")
+    writer.writerow("Book title,Author Name")
+    writer.writerow()
+    open_file.close()
 
 
 def extra_credit(filepath):
@@ -149,7 +171,8 @@ class TestCases(unittest.TestCase):
         # check that the variable you saved after calling the function is a list
         self.assertEqual(type(titles), list)
         # check that each item in the list is a tuple
-        self.assertEqual(type(titles[1]), tuple)
+        for i in titles:
+            self.assertEqual(type(i), tuple)
         # check that the first book and author tuple is correct (open search_results.htm and find it)
         self.assertEqual(titles[0], ('Harry Potter and the Deathly Hallows (Harry Potter, #7)', 'J.K. Rowling'))
         # check that the last title is correct (open search_results.htm and find it)
@@ -161,26 +184,33 @@ class TestCases(unittest.TestCase):
         # check that the length of TestCases.search_urls is correct (10 URLs)
         self.assertEqual(len(TestCases.search_urls), 10)
         # check that each URL in the TestCases.search_urls is a string
-        self.assertEqual(type(TestCases.search_urls[3]), str)
+        for i in TestCases.search_urls:
+            self.assertEqual(type(i), str)
         # check that each URL contains the correct url for Goodreads.com followed by /book/show/
-        
+        for i in TestCases.search_urls:
+            self.assertTrue('https://www.goodreads.com/book/show/' in i)
 
 
     def test_get_book_summary(self):
         # create a local variable – summaries – a list containing the results from get_book_summary()
         # for each URL in TestCases.search_urls (should be a list of tuples)
-        summaries = get_book_summary(TestCases.search_urls)
+        summaries = []
+        for url in TestCases.search_urls:
+            summaries.append(get_book_summary(url))
         # check that the number of book summaries is  correct (10)
         self.assertEqual(len(summaries), 10)
             # check that each item in the list is a tuple
-        self.assertEqual(type(summaries[4]), tuple)
+        for i in summaries:
+            self.assertEqual(type(i), tuple)
             # check that each tuple has 3 elements
-        self.assertEqual()
+            self.assertEqual(len(i), 3)
             # check that the first two elements in the tuple are string
-
+            self.assertEqual(type(i[0]), str)
+            self.assertEqual(type(i[1]), str)
             # check that the third element in the tuple, i.e. pages is an int
-
+            self.assertEqual(type(i[2]), int)
             # check that the first book in the search has 337 pages
+        self.assertEqual(summaries[0][2], 337)
 
 
     def test_summarize_best_books(self):
